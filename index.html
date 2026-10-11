@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>re-type | Speed Typing Test</title>
+  <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+  <div class="app-container">
+    <main>
+      <!-- Top row: prompt chip + icon actions -->
+      <div class="top-row">
+        <div id="prompt-chip" class="prompt-chip">
+          <span id="prompt-idle">Re-type, start typing<span class="caret" aria-hidden="true"></span></span>
+          <span id="prompt-live" hidden><span id="wpm">0</span>WPM, <span id="timer">30</span>s left...</span>
+        </div>
+        <div class="top-actions">
+          <button id="clock-btn" type="button" class="icon-btn" aria-label="Change duration" title="Change duration">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </button>
+          <button id="edit-btn" type="button" class="icon-btn" aria-label="Change text" title="Change text">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Final Score Overlay (inside typing box wrapper) -->
+      <div class="typing-wrap">
+      <div id="target" class="typing-area" aria-live="off" tabindex="0"></div>
+      <div id="overlay" class="finish-overlay" hidden>
+        <p>Final Score (WPM): <span id="ov-wpm">0</span>, Finished in <span id="ov-time">0</span> seconds</p>
+        <p>Press Tab to restart</p>
+      </div>
+      </div>
+
+      <!-- Duration popup -->
+      <div id="backdrop" class="backdrop" hidden></div>
+      <div id="duration-pop" class="popup" hidden>
+        <h3>Duration (s)</h3>
+        <input id="duration" type="number" min="10" max="30" step="1" value="30" class="input-number">
+      </div>
+
+      <!-- Custom text popup -->
+      <div id="text-pop" class="popup popup-wide" hidden>
+        <h3>Custom Target Text</h3>
+        <textarea id="custom" rows="4" placeholder="Enter custom target text..."></textarea>
+        <button id="apply" type="button" class="btn btn-primary">Change the current text</button>
+      </div>
+    </main>
+  </div>
+
+  <script src="script.js?v=2"></script>
+</body>
+</html>

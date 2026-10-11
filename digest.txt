@@ -1,0 +1,263 @@
+Directory structure:
+└── re-type/
+    ├── README.md
+    ├── index.html
+    ├── script.js
+    └── style.css
+
+================================================
+FILE: README.md
+================================================
+# re-type
+
+
+
+================================================
+FILE: index.html
+================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>re-type</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <div id="stats">
+      <div><span id="wpm-label">WPM</span> <span id="wpm">0</span></div>
+      <div>Time <span id="timer"></span></div>
+    </div>
+
+    <div id="target" aria-live="off"></div>
+
+    <div id="results" hidden>
+      <div>Average WPM: <span id="res-wpm">0</span></div>
+      <div>Accuracy: <span id="res-acc">0</span>%</div>
+    </div>
+
+    <div id="controls">
+      <label>Duration (s)
+        <input id="duration" type="number" min="10" max="30" step="1" value="30">
+      </label>
+      <button id="restart" type="button">Start / Restart</button>
+    </div>
+
+    <label for="custom">Custom text</label>
+    <textarea id="custom" rows="4" placeholder="Enter custom target text"></textarea>
+    <button id="apply" type="button">Apply text</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+
+
+
+================================================
+FILE: script.js
+================================================
+"use strict";
+
+// ---------- WPM logic (pure, no DOM, no input handling) ----------
+function calcWpm(charCount, elapsedMs) {
+  if (!(elapsedMs > 0) || charCount <= 0) return 0; // no division by zero
+  return (charCount / 5) / (elapsedMs / 60000);
+}
+
+function calcAccuracy(correctCount, totalCount) {
+  if (totalCount <= 0) return 0;
+  return (correctCount / totalCount) * 100;
+}
+
+// ---------- Config / state ----------
+const DEFAULT_TEXT = "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs, and sphinx of black quartz, judge my vow!";
+const MIN_DURATION = 10;
+const MAX_DURATION = 30;
+
+const state = {
+  target: DEFAULT_TEXT,   // active target; only changed by applyText()
+  typed: [],              // typed characters
+  duration: 30,           // seconds
+  status: "idle",         // idle | running | done
+  startTime: 0,
+  elapsedMs: 0,
+  intervalId: null,
+};
+
+// ---------- DOM ----------
+const $target = document.getElementById("target");
+const $wpm = document.getElementById("wpm");
+const $wpmLabel = document.getElementById("wpm-label");
+const $timer = document.getElementById("timer");
+const $custom = document.getElementById("custom");
+const $duration = document.getElementById("duration");
+const $results = document.getElementById("results");
+const $resWpm = document.getElementById("res-wpm");
+const $resAcc = document.getElementById("res-acc");
+const $restart = document.getElementById("restart");
+const $apply = document.getElementById("apply");
+
+let spans = [];
+
+// ---------- Rendering ----------
+function buildTarget() {
+  $target.textContent = "";
+  spans = [...state.target].map(ch => {
+    const s = document.createElement("span");
+    s.textContent = ch;
+    $target.appendChild(s);
+    return s;
+  });
+}
+
+function render() {
+  const t = [...state.target];
+  for (let i = 0; i < spans.length; i++) {
+    let cls = "pending";
+    if (i < state.typed.length) cls = state.typed[i] === t[i] ? "correct" : "incorrect";
+    else if (i === state.typed.length && state.status !== "done") cls = "current";
+    spans[i].className = cls;
+  }
+  const elapsed = state.status === "running" ? performance.now() - state.startTime : state.elapsedMs;
+  $wpm.textContent = Math.round(calcWpm(state.typed.length, elapsed));
+  $wpmLabel.textContent = state.status === "done" ? "Final WPM" : "WPM";
+  const remaining = Math.max(0, state.duration * 1000 - elapsed);
+  $timer.textContent = (remaining / 1000).toFixed(1) + "s";
+}
+
+function showResults() {
+  // Based on the final typed state only; corrected mistakes are already gone.
+  const t = [...state.target];
+  const correct = state.typed.reduce((n, ch, i) => n + (ch === t[i] ? 1 : 0), 0);
+  $resWpm.textContent = calcWpm(state.typed.length, state.elapsedMs).toFixed(1);
+  $resAcc.textContent = calcAccuracy(correct, state.typed.length).toFixed(1);
+  $results.hidden = false;
+}
+
+// ---------- Test lifecycle ----------
+function resetTest() {
+  clearInterval(state.intervalId);
+  state.typed = [];
+  state.status = "idle";
+  state.startTime = 0;
+  state.elapsedMs = 0;
+  $results.hidden = true;
+  buildTarget();
+  render();
+}
+
+function startTimer() {
+  state.status = "running";
+  state.startTime = performance.now();
+  state.intervalId = setInterval(tick, 100);
+}
+
+function finish(elapsedMs) {
+  clearInterval(state.intervalId);
+  state.status = "done";
+  state.elapsedMs = elapsedMs;
+  render();
+  showResults();
+}
+
+function tick() {
+  const elapsed = performance.now() - state.startTime;
+  const limit = state.duration * 1000;
+  if (elapsed >= limit) finish(limit); // clamp to exact limit
+  else render();
+}
+
+// ---------- Keyboard input ----------
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("textarea, input, select")) return; // don't hijack form fields
+  if (e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (state.status === "done") return;
+
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    if (state.typed.length > 0) state.typed.pop();
+    render();
+    return;
+  }
+
+  if (e.key.length !== 1) return; // Shift, Ctrl, arrows, Tab, Enter, etc.
+  e.preventDefault();             // stops space from scrolling
+
+  if (state.typed.length >= state.target.length) return;
+  if (state.status === "idle") startTimer();
+
+  state.typed.push(e.key);
+
+  if (state.typed.length === state.target.length) {
+    finish(performance.now() - state.startTime);
+  } else {
+    render();
+  }
+});
+
+// ---------- Controls ----------
+function applyText() {
+  // Newlines/tabs can't be typed, collapse all whitespace to single spaces.
+  const cleaned = $custom.value.replace(/\s+/g, " ").trim();
+  if (!cleaned) return; // empty/whitespace only: keep current test untouched
+  state.target = cleaned;
+  resetTest();
+}
+
+function applyDuration() {
+  let v = Math.round(Number($duration.value));
+  if (!Number.isFinite(v) || $duration.value === "") v = state.duration;
+  v = Math.min(MAX_DURATION, Math.max(MIN_DURATION, v));
+  $duration.value = v;
+  state.duration = v;
+  resetTest();
+}
+
+$restart.addEventListener("click", () => { resetTest(); $restart.blur(); });
+$apply.addEventListener("click", () => { applyText(); $apply.blur(); });
+$duration.addEventListener("change", () => { applyDuration(); $duration.blur(); });
+
+// ---------- Init ----------
+$custom.value = DEFAULT_TEXT;
+resetTest();
+
+
+
+================================================
+FILE: style.css
+================================================
+body { font-family: sans-serif; background: #fafafa; color: #222; margin: 0; }
+main { max-width: 760px; margin: 40px auto; padding: 0 16px; }
+
+#stats { display: flex; gap: 32px; font-size: 1.2rem; margin-bottom: 16px; }
+#stats span:last-child { font-weight: bold; }
+
+#target {
+  font-family: monospace;
+  font-size: 1.5rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 16px;
+  margin-bottom: 16px;
+  user-select: none;
+}
+#target .correct   { color: #1a7f37; }
+#target .incorrect { color: #fff; background: #d1242f; }
+#target .current   { background: #ffe58a; outline: 1px solid #c9a400; }
+#target .pending   { color: #888; }
+
+#controls { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; }
+#duration { width: 4em; }
+
+label { display: block; }
+textarea { width: 100%; box-sizing: border-box; font-family: monospace; margin: 4px 0 8px; }
+button { padding: 6px 12px; }
+
+#results { background: #fff; border: 1px solid #ccc; padding: 12px 16px; margin-bottom: 16px; font-size: 1.2rem; }
+#results[hidden] { display: none; }
+#results span { font-weight: bold; }
+
+

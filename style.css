@@ -1,0 +1,413 @@
+:root {
+  --deep: #293681;
+  --blue: #4274d9;
+  --pale: #95ccdd;
+  --mist: #d0e7e6;
+
+  --canvas: var(--mist);
+  --card: #ffffff;
+  --card-lip: var(--pale);
+  --field: var(--mist);
+
+  --ink: var(--deep);
+  --muted: #5a6a94;
+
+  --green: #2e9e5b;
+  --red: #e5484d;
+  --active: var(--blue);
+
+  --font: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ---- Focus mode: while a test runs, only the chip + typing box stay visible ---- */
+body.test-running .top-actions {
+  display: none !important;
+}
+/* When the timer ends, <body> loses .test-running, these rules stop matching,
+   and every element reverts to its normal display automatically. */
+
+body {
+  font-family: var(--font);
+  background-color: var(--canvas);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 24px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1024px;
+  margin: auto;
+}
+
+/* Prompt chip */
+.prompt-chip {
+  display: inline-block;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 12px 22px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 0 var(--card-lip);
+  animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* Top row + icon buttons */
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.top-row .prompt-chip {
+  margin-bottom: 0;
+}
+
+.top-actions {
+  display: flex;
+  gap: 12px;
+  animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) 0.08s both;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--card);
+  color: var(--ink);
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 0 var(--card-lip);
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover {
+  color: var(--blue);
+  transform: translateY(-2px);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.prompt-chip .caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  background: var(--ink);
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+
+/* Typing Target Box */
+.typing-wrap {
+  position: relative;
+  font-size: 2rem;
+  animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) 0.12s both;
+}
+
+.typing-area {
+  font-family: var(--font);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  background-color: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 -6px 0 var(--card-lip);
+  padding: 48px;
+  min-height: 300px;
+  max-height: 340px;
+  overflow: hidden;       /* no scrollbar, auto-scrolls smoothly */
+  user-select: none;
+  outline: none;
+}
+
+/* Finish overlay: blurred text + score */
+.typing-wrap.blurred .typing-area {
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+.finish-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  z-index: 6;
+  animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.finish-overlay[hidden] {
+  display: none;
+}
+
+.finish-overlay p {
+  margin: 0;
+}
+
+/* Edge fades: text sliding past the box edges dissolves under a blur.
+   Top fade only appears once scrolled, and scales with font-size (em),
+   so narrow viewports get a proportionally smaller blur. */
+.typing-wrap::before,
+.typing-wrap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.typing-wrap::before {
+  top: 0;
+  height: 2.2em;
+  background: linear-gradient(to bottom, var(--card) 30%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent);
+  mask-image: linear-gradient(to bottom, black 40%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.typing-wrap::after {
+  bottom: 0;
+  height: 2.4em;
+  background: linear-gradient(to top, var(--card) 45%, transparent);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.typing-wrap.scrolled::before,
+.typing-wrap.scrolled::after {
+  opacity: 1;
+}
+
+/* Inner wrapper that the auto-scroll slides with translateY */
+.text-window {
+  position: relative;
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  will-change: transform;
+}
+
+#target span {
+  position: relative;
+}
+
+#target .pending {
+  color: var(--ink);
+}
+
+#target .correct {
+  color: var(--green);
+}
+
+#target .incorrect {
+  color: var(--red);
+  text-decoration: line-through;
+  text-decoration-thickness: 3px;
+}
+
+#target .current {
+  color: var(--active);
+  box-shadow: inset 0 -4px 0 var(--active);
+  border-radius: 2px;
+}
+
+/* Newline marker: universal return symbol, tinted per char state */
+#target .nl {
+  color: var(--muted);
+}
+
+#target .correct.nl {
+  color: var(--green);
+}
+
+#target .incorrect.nl {
+  color: var(--red);
+}
+
+#target .current.nl {
+  color: var(--active);
+}
+
+/* Popups */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(41, 54, 129, 0.35);
+  backdrop-filter: blur(6px);
+  z-index: 10;
+}
+
+.backdrop[hidden] {
+  display: none;
+}
+
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 0 var(--card-lip), 0 24px 64px rgba(41, 54, 129, 0.3);
+  padding: 32px;
+  z-index: 11;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.popup[hidden] {
+  display: none;
+}
+
+.popup.opening {
+  animation: pop-in 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.popup.closing {
+  animation: pop-out 0.25s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.popup-wide {
+  width: min(520px, calc(100vw - 48px));
+}
+
+.popup h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 20px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@keyframes pop-out {
+  from { opacity: 1; transform: translate(-50%, -50%); }
+  to { opacity: 0; transform: translate(-50%, calc(-50% + 24px)); }
+}
+
+/* Popup fields */
+.input-number {
+  background: var(--field);
+  border: 2px solid transparent;
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-family: var(--font);
+  font-size: 1.1rem;
+  font-weight: 700;
+  width: 120px;
+  text-align: center;
+}
+
+.input-number:focus {
+  outline: none;
+  border-color: var(--active);
+}
+
+textarea#custom {
+  width: 100%;
+  background: var(--field);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 400;
+  padding: 14px 16px;
+  resize: vertical;
+  min-height: 120px;
+}
+
+textarea#custom:focus {
+  outline: none;
+  border-color: var(--active);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background-color: var(--blue);
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--deep);
+}
+
+@media (max-width: 600px) {
+  .typing-wrap {
+    font-size: 1.5rem;
+  }
+
+  .typing-area {
+    padding: 28px;
+    font-size: 1.5rem;
+  }
+
+  .top-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
